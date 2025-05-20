@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from '../constants';
-import jwtDecode from 'jwt-decode';
+import api from './api';
 
 /**
  * Set authentication token to local storage
@@ -30,23 +30,7 @@ export const removeToken = () => {
  */
 export const isAuthenticated = () => {
   const token = getToken();
-  if (!token) return false;
-  
-  try {
-    const decoded = jwtDecode(token);
-    const currentTime = Date.now() / 1000;
-    
-    // Check if token is expired
-    if (decoded.exp < currentTime) {
-      removeToken();
-      return false;
-    }
-    
-    return true;
-  } catch (err) {
-    removeToken();
-    return false;
-  }
+  return token && !isTokenExpired(token);
 };
 
 /**
@@ -98,4 +82,49 @@ export const hasRole = (role) => {
 export const clearAuth = () => {
   removeToken();
   removeUser();
+};
+
+// 檢查 token 是否過期
+const isTokenExpired = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+
+    const { exp } = JSON.parse(jsonPayload);
+    return exp * 1000 < Date.now();
+  } catch (error) {
+    return true;
+  }
+};
+
+// 設置 token
+export const setAuthToken = (token) => {
+  if (token) {
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    localStorage.setItem('token', token);
+  } else {
+    delete api.defaults.headers.common['Authorization'];
+    localStorage.removeItem('token');
+  }
+};
+
+// 獲取用戶信息
+export const getUserInfo = () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    return null;
+  }
 };

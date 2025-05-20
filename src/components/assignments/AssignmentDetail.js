@@ -1,294 +1,385 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { getAssignment, deleteAssignment, submitAssignment, gradeSubmission } from '../../services/assignmentService';
-import moment from 'moment';
-import Spinner from '../common/Spinner';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  Container,
+  Typography,
+  Box,
+  Paper,
+  Button,
+  Divider,
+  Alert,
+  CircularProgress,
+  Chip,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField
+} from '@mui/material';
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  AttachFile as AttachFileIcon,
+  Download as DownloadIcon,
+  Send as SendIcon,
+  Grade as GradeIcon
+} from '@mui/icons-material';
+import { getAssignment, deleteAssignment, submitAssignment, gradeAssignment } from '../../redux/actions/assignment';
+import { format } from 'date-fns';
+import { zhTW } from 'date-fns/locale';
 
 const AssignmentDetail = () => {
-  const { classId, assignmentId } = useParams();
-  const [assignment, setAssignment] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [files, setFiles] = useState([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [grading, setGrading] = useState({});
-  
   const navigate = useNavigate();
-  const { user } = useSelector((state) => state.auth);
-  const isTeacher = user && user.role === 'teacher';
+  const dispatch = useDispatch();
+  const { classId, assignmentId } = useParams();
+  const { assignment, loading, error } = useSelector(state => state.assignment);
+  const { user } = useSelector(state => state.auth);
+  const isTeacher = user?.role === 'teacher';
+  const [submissionDialogOpen, setSubmissionDialogOpen] = useState(false);
+  const [gradingDialogOpen, setGradingDialogOpen] = useState(false);
+  const [submissionFiles, setSubmissionFiles] = useState([]);
+  const [grade, setGrade] = useState('');
+  const [feedback, setFeedback] = useState('');
 
   useEffect(() => {
-    const fetchAssignment = async () => {
-      try {
-        const data = await getAssignment(assignmentId);
-        setAssignment(data);
-      } catch (err) {
-        setError('Failed to load assignment details');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAssignment();
-  }, [assignmentId]);
-
-  const handleFileChange = (e) => {
-    setFiles(Array.from(e.target.files));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSubmitting(true);
-    
-    const formData = new FormData();
-    files.forEach(file => {
-      formData.append('files', file);
-    });
-    
-    try {
-      await submitAssignment(assignmentId, formData);
-      // Refresh assignment data
-      const updatedAssignment = await getAssignment(assignmentId);
-      setAssignment(updatedAssignment);
-      setFiles([]);
-    } catch (err) {
-      setError('Failed to submit assignment');
-      console.error(err);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    dispatch(getAssignment(assignmentId));
+  }, [dispatch, assignmentId]);
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this assignment?')) {
+    if (window.confirm('確定要刪除此作業嗎？')) {
       try {
-        await deleteAssignment(assignmentId);
-        navigate(`/classes/${classId}`);
+        await dispatch(deleteAssignment(assignmentId));
+        navigate(`/classes/${classId}/assignments`);
       } catch (err) {
-        setError('Failed to delete assignment');
-        console.error(err);
+        console.error('刪除作業失敗:', err);
       }
     }
   };
 
-  const handleGradeChange = (studentId, value) => {
-    setGrading({
-      ...grading,
-      [studentId]: value
-    });
+  const handleFileChange = (e) => {
+    setSubmissionFiles(Array.from(e.target.files));
   };
 
-  const submitGrade = async (submissionId, studentId) => {
+  const handleSubmit = async () => {
+    const formData = new FormData();
+    submissionFiles.forEach(file => {
+      formData.append('files', file);
+    });
+
     try {
-      await gradeSubmission(assignmentId, submissionId, { grade: grading[studentId] });
-      // Refresh assignment data
-      const updatedAssignment = await getAssignment(assignmentId);
-      setAssignment(updatedAssignment);
+      await dispatch(submitAssignment(assignmentId, formData));
+      setSubmissionDialogOpen(false);
+      setSubmissionFiles([]);
     } catch (err) {
-      setError('Failed to submit grade');
-      console.error(err);
+      console.error('提交作業失敗:', err);
     }
+  };
+
+  const handleGrade = async () => {
+    try {
+      await dispatch(gradeAssignment(assignmentId, {
+        grade: Number(grade),
+        feedback
+      }));
+      setGradingDialogOpen(false);
+      setGrade('');
+      setFeedback('');
+    } catch (err) {
+      console.error('評分失敗:', err);
+    }
+  };
+
+  const getStatusColor = (dueDate) => {
+    const now = new Date();
+    const due = new Date(dueDate);
+    if (now > due) return 'error';
+    if (now.getTime() + 24 * 60 * 60 * 1000 > due.getTime()) return 'warning';
+    return 'success';
   };
 
   if (loading) {
-    return <Spinner />;
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+      </Box>
+    );
   }
 
   if (error) {
-    return <div className="alert alert-danger">{error}</div>;
+    return (
+      <Box my={2}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
   }
 
   if (!assignment) {
-    return <div className="alert alert-warning">Assignment not found</div>;
+    return (
+      <Box my={2}>
+        <Alert severity="info">找不到作業</Alert>
+      </Box>
+    );
   }
 
-  // Find student's submission if they have one
-  const studentSubmission = assignment.submissions.find(
-    sub => sub.studentId._id === user._id
-  );
-
-  const isPastDue = moment().isAfter(moment(assignment.dueDate));
-
   return (
-    <div className="assignment-detail-container">
-      <div className="assignment-header">
-        <h2>{assignment.title}</h2>
-        <div className="assignment-meta">
-          <span className="due-date">Due: {moment(assignment.dueDate).format('MMMM D, YYYY, h:mm a')}</span>
-          <span className="points">Points: {assignment.pointsPossible}</span>
-        </div>
-        {isTeacher && (
-          <div className="teacher-actions">
-            <button 
-              className="btn btn-primary"
-              onClick={() => navigate(`/classes/${classId}/assignments/${assignmentId}/edit`)}
-            >
-              Edit Assignment
-            </button>
-            <button 
-              className="btn btn-danger"
-              onClick={handleDelete}
-            >
-              Delete Assignment
-            </button>
-          </div>
-        )}
-      </div>
+    <Container maxWidth="md">
+      <Box my={4}>
+        <Paper elevation={3}>
+          <Box p={4}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+              <Typography variant="h4" component="h1">
+                {assignment.title}
+              </Typography>
+              <Box display="flex" gap={1}>
+                {isTeacher ? (
+                  <>
+                    <Button
+                      variant="outlined"
+                      startIcon={<EditIcon />}
+                      onClick={() => navigate(`/classes/${classId}/assignments/${assignmentId}/edit`)}
+                    >
+                      編輯
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      startIcon={<DeleteIcon />}
+                      onClick={handleDelete}
+                    >
+                      刪除
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="contained"
+                    startIcon={<SendIcon />}
+                    onClick={() => setSubmissionDialogOpen(true)}
+                    disabled={new Date() > new Date(assignment.dueDate)}
+                  >
+                    提交作業
+                  </Button>
+                )}
+              </Box>
+            </Box>
 
-      <div className="assignment-content">
-        <h3>Instructions</h3>
-        <div className="assignment-description">
-          {assignment.description}
-        </div>
-      </div>
+            <Box mb={3}>
+              <Chip
+                label={`截止日期：${format(new Date(assignment.dueDate), 'yyyy/MM/dd HH:mm', { locale: zhTW })}`}
+                color={getStatusColor(assignment.dueDate)}
+                sx={{ mr: 1 }}
+              />
+              <Chip
+                label={`分數：${assignment.pointsPossible}`}
+                color="primary"
+              />
+            </Box>
 
-      {assignment.attachments && assignment.attachments.length > 0 && (
-        <div className="assignment-attachments">
-          <h3>Attachments</h3>
-          <ul>
-            {assignment.attachments.map((attachment, index) => (
-              <li key={index}>
-                <a href={attachment.fileUrl} target="_blank" rel="noopener noreferrer">
-                  {attachment.fileName}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+            <Typography variant="body1" paragraph>
+              {assignment.description}
+            </Typography>
 
-      {!isTeacher && (
-        <div className="submission-section">
-          <h3>Your Submission</h3>
-          {studentSubmission ? (
-            <div className="submission-info">
-              <p>Submitted on: {moment(studentSubmission.submissionDate).format('MMMM D, YYYY, h:mm a')}</p>
-              {studentSubmission.grade !== undefined ? (
-                <p className="grade">Grade: {studentSubmission.grade} / {assignment.pointsPossible}</p>
-              ) : (
-                <p>Not yet graded</p>
-              )}
-              {studentSubmission.files && studentSubmission.files.length > 0 && (
-                <div>
-                  <h4>Submitted Files</h4>
-                  <ul>
-                    {studentSubmission.files.map((file, index) => (
-                      <li key={index}>
-                        <a href={file.fileUrl} target="_blank" rel="noopener noreferrer">
-                          {file.fileName}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          ) : isPastDue ? (
-            <div className="alert alert-danger">
-              This assignment is past due and can no longer be submitted.
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="submission-form">
-              <div className="form-group">
-                <label htmlFor="files">Upload Files</label>
-                <input
-                  type="file"
-                  id="files"
-                  name="files"
-                  onChange={handleFileChange}
-                  multiple
-                  required
-                  className="form-control"
-                />
-              </div>
-              <button 
-                type="submit" 
-                className="btn btn-primary"
-                disabled={submitting || files.length === 0}
-              >
-                {submitting ? 'Submitting...' : 'Submit Assignment'}
-              </button>
-            </form>
-          )}
-        </div>
-      )}
+            {assignment.attachments && assignment.attachments.length > 0 && (
+              <>
+                <Divider sx={{ my: 3 }} />
+                <Typography variant="h6" gutterBottom>
+                  附件
+                </Typography>
+                <List>
+                  {assignment.attachments.map((attachment, index) => (
+                    <ListItem key={index}>
+                      <ListItemIcon>
+                        <AttachFileIcon />
+                      </ListItemIcon>
+                      <ListItemText primary={attachment.fileName} />
+                      <IconButton
+                        edge="end"
+                        component="a"
+                        href={attachment.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <DownloadIcon />
+                      </IconButton>
+                    </ListItem>
+                  ))}
+                </List>
+              </>
+            )}
 
-      {isTeacher && (
-        <div className="submissions-section">
-          <h3>Student Submissions</h3>
-          {assignment.submissions.length === 0 ? (
-            <p>No submissions yet</p>
-          ) : (
-            <div className="submissions-list">
-              {assignment.submissions.map(submission => (
-                <div key={submission._id} className="submission-item">
-                  <h4>{submission.studentId.firstName} {submission.studentId.lastName}</h4>
-                  <p>Submitted: {moment(submission.submissionDate).format('MMMM D, YYYY, h:mm a')}</p>
-                  
-                  {submission.files && submission.files.length > 0 && (
-                    <div>
-                      <h5>Files:</h5>
-                      <ul>
-                        {submission.files.map((file, index) => (
-                          <li key={index}>
-                            <a href={file.fileUrl} target="_blank" rel="noopener noreferrer">
-                              {file.fileName}
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  <div className="grading-section">
-                    {submission.grade !== undefined ? (
-                      <div>
-                        <p>Grade: {submission.grade} / {assignment.pointsPossible}</p>
-                        <div className="update-grade">
-                          <input 
-                            type="number" 
-                            min="0" 
-                            max={assignment.pointsPossible}
-                            defaultValue={submission.grade}
-                            onChange={(e) => handleGradeChange(submission.studentId._id, e.target.value)}
-                            className="form-control grade-input"
-                          />
-                          <button 
-                            className="btn btn-primary btn-sm"
-                            onClick={() => submitGrade(submission._id, submission.studentId._id)}
-                          >
-                            Update Grade
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="assign-grade">
-                        <input 
-                          type="number"
-                          min="0"
-                          max={assignment.pointsPossible}
-                          placeholder="Points"
-                          onChange={(e) => handleGradeChange(submission.studentId._id, e.target.value)}
-                          className="form-control grade-input"
-                        />
-                        <button 
-                          className="btn btn-primary btn-sm"
-                          onClick={() => submitGrade(submission._id, submission.studentId._id)}
-                        >
-                          Assign Grade
-                        </button>
-                      </div>
+            {!isTeacher && assignment.submission && (
+              <>
+                <Divider sx={{ my: 3 }} />
+                <Typography variant="h6" gutterBottom>
+                  我的提交
+                </Typography>
+                <List>
+                  {assignment.submission.files.map((file, index) => (
+                    <ListItem key={index}>
+                      <ListItemIcon>
+                        <AttachFileIcon />
+                      </ListItemIcon>
+                      <ListItemText primary={file.fileName} />
+                      <IconButton
+                        edge="end"
+                        component="a"
+                        href={file.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <DownloadIcon />
+                      </IconButton>
+                    </ListItem>
+                  ))}
+                </List>
+                {assignment.submission.grade !== undefined && (
+                  <Box mt={2}>
+                    <Typography variant="subtitle1">
+                      分數：{assignment.submission.grade} / {assignment.pointsPossible}
+                    </Typography>
+                    {assignment.submission.feedback && (
+                      <Typography variant="body2" color="text.secondary">
+                        評語：{assignment.submission.feedback}
+                      </Typography>
                     )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+                  </Box>
+                )}
+              </>
+            )}
+
+            {isTeacher && assignment.submissions && assignment.submissions.length > 0 && (
+              <>
+                <Divider sx={{ my: 3 }} />
+                <Typography variant="h6" gutterBottom>
+                  學生提交
+                </Typography>
+                <List>
+                  {assignment.submissions.map((submission, index) => (
+                    <ListItem key={index}>
+                      <ListItemText
+                        primary={submission.student.name}
+                        secondary={
+                          <>
+                            <Typography variant="body2" component="span">
+                              提交時間：{format(new Date(submission.submittedAt), 'yyyy/MM/dd HH:mm', { locale: zhTW })}
+                            </Typography>
+                            {submission.grade !== undefined && (
+                              <Typography variant="body2" component="div">
+                                分數：{submission.grade} / {assignment.pointsPossible}
+                              </Typography>
+                            )}
+                          </>
+                        }
+                      />
+                      <Button
+                        variant="outlined"
+                        startIcon={<GradeIcon />}
+                        onClick={() => {
+                          setGrade(submission.grade || '');
+                          setFeedback(submission.feedback || '');
+                          setGradingDialogOpen(true);
+                        }}
+                      >
+                        評分
+                      </Button>
+                    </ListItem>
+                  ))}
+                </List>
+              </>
+            )}
+          </Box>
+        </Paper>
+      </Box>
+
+      {/* 提交作業對話框 */}
+      <Dialog open={submissionDialogOpen} onClose={() => setSubmissionDialogOpen(false)}>
+        <DialogTitle>提交作業</DialogTitle>
+        <DialogContent>
+          <Box mt={2}>
+            <input
+              type="file"
+              multiple
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+              id="submission-files"
+            />
+            <label htmlFor="submission-files">
+              <Button
+                variant="outlined"
+                component="span"
+                startIcon={<AttachFileIcon />}
+              >
+                選擇檔案
+              </Button>
+            </label>
+            {submissionFiles.length > 0 && (
+              <List>
+                {submissionFiles.map((file, index) => (
+                  <ListItem key={index}>
+                    <ListItemIcon>
+                      <AttachFileIcon />
+                    </ListItemIcon>
+                    <ListItemText primary={file.name} />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSubmissionDialogOpen(false)}>取消</Button>
+          <Button
+            onClick={handleSubmit}
+            variant="contained"
+            disabled={submissionFiles.length === 0}
+          >
+            提交
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 評分對話框 */}
+      <Dialog open={gradingDialogOpen} onClose={() => setGradingDialogOpen(false)}>
+        <DialogTitle>評分作業</DialogTitle>
+        <DialogContent>
+          <Box mt={2}>
+            <TextField
+              fullWidth
+              label="分數"
+              type="number"
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              inputProps={{ min: 0, max: assignment.pointsPossible }}
+              margin="normal"
+            />
+            <TextField
+              fullWidth
+              label="評語"
+              multiline
+              rows={4}
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              margin="normal"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setGradingDialogOpen(false)}>取消</Button>
+          <Button
+            onClick={handleGrade}
+            variant="contained"
+            disabled={!grade || grade < 0 || grade > assignment.pointsPossible}
+          >
+            提交評分
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
 };
 

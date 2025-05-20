@@ -8,7 +8,7 @@ import {
   Grid,
   Box,
   Paper,
-} from '@material-ui/core';
+} from '@mui/material';
 
 const Landing = () => {
   const navigate = useNavigate();

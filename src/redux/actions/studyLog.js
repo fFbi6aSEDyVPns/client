@@ -1,19 +1,19 @@
-import api from '../../services/api';
+import api from '../../utils/api';
 import { setAlert } from './alert';
 import {
   GET_STUDY_LOGS,
   GET_STUDY_LOG,
-  ADD_STUDY_LOG,
+  CREATE_STUDY_LOG,
   UPDATE_STUDY_LOG,
   DELETE_STUDY_LOG,
-  STUDY_LOG_ERROR
+  STUDY_LOG_ERROR,
+  CLEAR_STUDY_LOG
 } from './types';
 
-// Get all study logs
+// 獲取所有學習記錄
 export const getStudyLogs = () => async dispatch => {
   try {
     const res = await api.get('/study-logs');
-    
     dispatch({
       type: GET_STUDY_LOGS,
       payload: res.data
@@ -21,16 +21,15 @@ export const getStudyLogs = () => async dispatch => {
   } catch (err) {
     dispatch({
       type: STUDY_LOG_ERROR,
-      payload: { msg: err.response.statusText, status: err.response.status }
+      payload: err.response?.data?.message || '獲取學習記錄失敗'
     });
   }
 };
 
-// Get study log by ID
-export const getStudyLogById = (id) => async dispatch => {
+// 獲取單個學習記錄
+export const getStudyLog = id => async dispatch => {
   try {
     const res = await api.get(`/study-logs/${id}`);
-    
     dispatch({
       type: GET_STUDY_LOG,
       payload: res.data
@@ -38,80 +37,66 @@ export const getStudyLogById = (id) => async dispatch => {
   } catch (err) {
     dispatch({
       type: STUDY_LOG_ERROR,
-      payload: { msg: err.response.statusText, status: err.response.status }
+      payload: err.response?.data?.message || '獲取學習記錄失敗'
     });
   }
 };
 
-// Create study log
-export const createStudyLog = (formData, history) => async dispatch => {
+// 創建學習記錄
+export const createStudyLog = formData => async dispatch => {
   try {
     const res = await api.post('/study-logs', formData);
-    
     dispatch({
-      type: ADD_STUDY_LOG,
+      type: CREATE_STUDY_LOG,
       payload: res.data
     });
-
-    dispatch(setAlert('Study Log Created', 'success'));
-    history.push('/study-logs');
+    dispatch(setAlert('學習記錄已創建', 'success'));
   } catch (err) {
-    const errors = err.response.data.errors;
-
-    if (errors) {
-      errors.forEach(error => dispatch(setAlert(error.msg, 'danger')));
-    }
-
     dispatch({
       type: STUDY_LOG_ERROR,
-      payload: { msg: err.response.statusText, status: err.response.status }
+      payload: err.response?.data?.message || '創建學習記錄失敗'
     });
+    dispatch(setAlert(err.response?.data?.message || '創建學習記錄失敗', 'error'));
   }
 };
 
-// Update study log
-export const updateStudyLog = (id, formData, history) => async dispatch => {
+// 更新學習記錄
+export const updateStudyLog = (id, formData) => async dispatch => {
   try {
     const res = await api.put(`/study-logs/${id}`, formData);
-    
     dispatch({
       type: UPDATE_STUDY_LOG,
       payload: res.data
     });
-
-    dispatch(setAlert('Study Log Updated', 'success'));
-    history.push('/study-logs');
+    dispatch(setAlert('學習記錄已更新', 'success'));
   } catch (err) {
-    const errors = err.response.data.errors;
-
-    if (errors) {
-      errors.forEach(error => dispatch(setAlert(error.msg, 'danger')));
-    }
-
     dispatch({
       type: STUDY_LOG_ERROR,
-      payload: { msg: err.response.statusText, status: err.response.status }
+      payload: err.response?.data?.message || '更新學習記錄失敗'
     });
+    dispatch(setAlert(err.response?.data?.message || '更新學習記錄失敗', 'error'));
   }
 };
 
-// Delete study log
+// 刪除學習記錄
 export const deleteStudyLog = id => async dispatch => {
-  if (window.confirm('Are you sure you want to delete this study log?')) {
-    try {
-      await api.delete(`/study-logs/${id}`);
-      
-      dispatch({
-        type: DELETE_STUDY_LOG,
-        payload: id
-      });
-
-      dispatch(setAlert('Study Log Removed', 'success'));
-    } catch (err) {
-      dispatch({
-        type: STUDY_LOG_ERROR,
-        payload: { msg: err.response.statusText, status: err.response.status }
-      });
-    }
+  try {
+    await api.delete(`/study-logs/${id}`);
+    dispatch({
+      type: DELETE_STUDY_LOG,
+      payload: id
+    });
+    dispatch(setAlert('學習記錄已刪除', 'success'));
+  } catch (err) {
+    dispatch({
+      type: STUDY_LOG_ERROR,
+      payload: err.response?.data?.message || '刪除學習記錄失敗'
+    });
+    dispatch(setAlert(err.response?.data?.message || '刪除學習記錄失敗', 'error'));
   }
+};
+
+// 清除學習記錄
+export const clearStudyLog = () => dispatch => {
+  dispatch({ type: CLEAR_STUDY_LOG });
 };

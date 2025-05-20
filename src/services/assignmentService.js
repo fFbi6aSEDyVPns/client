@@ -3,7 +3,7 @@ import api from './api';
 // Get all assignments for a class
 export const getClassAssignments = async (classId) => {
   try {
-    const response = await api.get(`/assignments/class/${classId}`);
+    const response = await api.get(`/classes/${classId}/assignments`);
     return response.data;
   } catch (error) {
     throw error;
@@ -21,9 +21,9 @@ export const getUserAssignments = async () => {
 };
 
 // Create a new assignment
-export const createAssignment = async (assignmentData) => {
+export const createAssignment = async (classId, assignmentData) => {
   try {
-    const response = await api.post('/assignments', assignmentData);
+    const response = await api.post(`/classes/${classId}/assignments`, assignmentData);
     return response.data;
   } catch (error) {
     throw error;
@@ -54,6 +54,39 @@ export const updateAssignmentStatus = async (id, status) => {
 export const deleteAssignment = async (id) => {
   try {
     const response = await api.delete(`/assignments/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Get a single assignment
+export const getAssignment = async (id) => {
+  try {
+    const response = await api.get(`/assignments/${id}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Submit an assignment
+export const submitAssignment = async (assignmentId, submissionData) => {
+  try {
+    const response = await api.post(`/assignments/${assignmentId}/submit`, submissionData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Grade a submission
+export const gradeSubmission = async (assignmentId, submissionId, gradeData) => {
+  try {
+    const response = await api.put(
+      `/assignments/${assignmentId}/submissions/${submissionId}/grade`,
+      gradeData
+    );
     return response.data;
   } catch (error) {
     throw error;

@@ -1,48 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { createClass, updateClass, fetchClassDetails } from '../../redux/actions/classActions';
-import { FaArrowLeft, FaSave } from 'react-icons/fa';
-import './ClassForm.css';
+import {
+  Container,
+  Typography,
+  Box,
+  Paper,
+  TextField,
+  Button,
+  Grid,
+  MenuItem,
+  Alert,
+  CircularProgress
+} from '@mui/material';
+import { ArrowBack as ArrowBackIcon, Save as SaveIcon } from '@mui/icons-material';
+import { createClass, updateClass, getClassDetails } from '../redux/actions/classActions';
 
 const ClassForm = () => {
   const { id } = useParams();
   const isEditMode = Boolean(id);
   const navigate = useNavigate();
   const dispatch = useDispatch();
-
+  const { loading, error } = useSelector((state) => state.classes);
   const { user } = useSelector((state) => state.auth);
-  const { classDetail, loading, error } = useSelector((state) => state.classes);
+
+  // 檢查用戶權限
+  useEffect(() => {
+    if (user && user.role !== 'teacher' && user.role !== 'admin') {
+      navigate('/classes');
+    }
+  }, [user, navigate]);
 
   const [formData, setFormData] = useState({
     name: '',
-    subject: '',
-    grade: '',
-    semester: '',
     description: '',
-    classCode: ''
+    grade: '',
+    academicYear: '',
   });
 
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (isEditMode) {
-      dispatch(fetchClassDetails(id));
+      dispatch(getClassDetails(id));
     }
   }, [dispatch, id, isEditMode]);
-
-  useEffect(() => {
-    if (isEditMode && classDetail) {
-      setFormData({
-        name: classDetail.name || '',
-        subject: classDetail.subject || '',
-        grade: classDetail.grade || '',
-        semester: classDetail.semester || '',
-        description: classDetail.description || '',
-        classCode: classDetail.classCode || ''
-      });
-    }
-  }, [isEditMode, classDetail]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,7 +53,7 @@ const ClassForm = () => {
       [name]: value
     }));
     
-    // Clear errors when field is changed
+    // 清除錯誤
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -64,168 +66,155 @@ const ClassForm = () => {
     const newErrors = {};
     
     if (!formData.name.trim()) {
-      newErrors.name = 'Please enter a class name';
-    }
-    
-    if (!formData.subject.trim()) {
-      newErrors.subject = 'Please enter subject';
+      newErrors.name = '請輸入班級名稱';
     }
     
     if (!formData.grade.trim()) {
-      newErrors.grade = 'Please enter grade';
+      newErrors.grade = '請選擇年級';
     }
     
-    if (!formData.semester.trim()) {
-      newErrors.semester = 'Please enter semester';
+    if (!formData.academicYear.trim()) {
+      newErrors.academicYear = '請選擇學年';
     }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
       return;
     }
     
-    if (isEditMode) {
-      dispatch(updateClass(id, formData, () => navigate(`/classes/${id}`)));
-    } else {
-      dispatch(createClass({...formData, teacher: user._id}, () => navigate('/classes')));
+    try {
+      if (isEditMode) {
+        await dispatch(updateClass(id, formData));
+      } else {
+        await dispatch(createClass({ ...formData, teacher: user._id }));
+      }
+      navigate('/classes');
+    } catch (err) {
+      console.error('提交表單失敗:', err);
     }
   };
 
-  // Redirect if user is not a teacher
-  if (user && user.role !== 'teacher') {
-    return navigate('/classes');
-  }
-
   return (
-    <div className="class-form-container">
-      <div className="form-header">
-        <Link to={isEditMode ? `/classes/${id}` : '/classes'} className="back-link">
-          <FaArrowLeft /> {isEditMode ? 'Return to Class Details' : 'Return to Class List'}
-        </Link>
-        <h1>{isEditMode ? 'Edit class' : 'Create new class'}</h1>
-      </div>
+    <Container>
+      <Box my={4}>
+        <Box display="flex" alignItems="center" mb={3}>
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate('/classes')}
+            sx={{ mr: 2 }}
+          >
+            返回
+          </Button>
+          <Typography variant="h4" component="h1">
+            {isEditMode ? '編輯班級' : '創建班級'}
+          </Typography>
+        </Box>
 
-      {loading ? (
-        <div className="loading">Landing...</div>
-      ) : error ? (
-        <div className="error-message">{error}</div>
-      ) : (
-        <form onSubmit={handleSubmit} className="class-form">
-          <div className="form-group">
-            <label htmlFor="name">Class name *</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className={errors.name ? 'error' : ''}
-            />
-            {errors.name && <div className="error-text">{errors.name}</div>}
-          </div>
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="subject">Subject *</label>
-              <input
-                type="text"
-                id="subject"
-                name="subject"
-                value={formData.subject}
-                onChange={handleChange}
-                className={errors.subject ? 'error' : ''}
-              />
-              {errors.subject && <div className="error-text">{errors.subject}</div>}
-            </div>
+        <Paper elevation={3}>
+          <Box p={4}>
+            <form onSubmit={handleSubmit}>
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="班級名稱"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    error={!!errors.name}
+                    helperText={errors.name}
+                    required
+                  />
+                </Grid>
 
-            <div className="form-group">
-              <label htmlFor="grade">Grade *</label>
-              <select
-                id="grade"
-                name="grade"
-                value={formData.grade}
-                onChange={handleChange}
-                className={errors.grade ? 'error' : ''}
-              >
-                <option value="">Select grade</option>
-                <option value="Grade 1">Grade 1</option>
-                <option value="Grade 2">Grade 2</option>
-                <option value="Grade 3">Grade 3</option>
-                <option value="Grade 4">Grade 4</option>
-                <option value="Grade 5">Grade 5</option>
-                <option value="Grade 6">Grade 6</option>
-                <option value="Grade 7">Grade 7</option>
-                <option value="Grade 8">Grade 8</option>
-                <option value="Grade 9">Grade 9</option>
-                <option value="Grade 10">Grade 10</option>
-                <option value="Grade 11">Grade 11</option>
-                <option value="Grade 12">Grade 12</option>
-              </select>
-              {errors.grade && <div className="error-text">{errors.grade}</div>}
-            </div>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="年級"
+                    name="grade"
+                    value={formData.grade}
+                    onChange={handleChange}
+                    error={!!errors.grade}
+                    helperText={errors.grade}
+                    required
+                  >
+                    {[...Array(12)].map((_, i) => (
+                      <MenuItem key={i + 1} value={`${i + 1}年級`}>
+                        {i + 1}年級
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Grid>
 
-            <div className="form-group">
-              <label htmlFor="semester">Semester *</label>
-              <select
-                id="semester"
-                name="semester"
-                value={formData.semester}
-                onChange={handleChange}
-                className={errors.semester ? 'error' : ''}
-              >
-                <option value="">Select semester</option>
-                <option value="First semester">First semester</option>
-                <option value="Second semester">Second semester</option>
-                <option value="Summer class">Summer class</option>
-                <option value="Winter class">Winter class</option>
-              </select>
-              {errors.semester && <div className="error-text">{errors.semester}</div>}
-            </div>
-          </div>
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="學年"
+                    name="academicYear"
+                    value={formData.academicYear}
+                    onChange={handleChange}
+                    error={!!errors.academicYear}
+                    helperText={errors.academicYear}
+                    required
+                  >
+                    <MenuItem value="111學年度">111學年度</MenuItem>
+                    <MenuItem value="112學年度">112學年度</MenuItem>
+                    <MenuItem value="113學年度">113學年度</MenuItem>
+                  </TextField>
+                </Grid>
 
-          <div className="form-group">
-            <label htmlFor="classCode">Class ID</label>
-            <input
-              type="text"
-              id="classCode"
-              name="classCode"
-              value={formData.classCode}
-              onChange={handleChange}
-              disabled={isEditMode}
-              placeholder={!isEditMode ? "Leave blank will auto-generate" : ""}
-            />
-            {!isEditMode && <div className="hint-text">Leave blank will auto-generate a 6-digit class ID</div>}
-          </div>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="班級描述"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleChange}
+                    multiline
+                    rows={4}
+                  />
+                </Grid>
 
-          <div className="form-group">
-            <label htmlFor="description">Class description</label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows="4"
-            ></textarea>
-          </div>
-
-          <div className="form-actions">
-            <button type="button" onClick={() => navigate(isEditMode ? `/classes/${id}` : '/classes')} className="btn-cancel">
-              cancel
-            </button>
-            <button type="submit" className="btn-save">
-              <FaSave /> {isEditMode ? 'Sve changes' : 'Create class'}
-            </button>
-          </div>
-        </form>
-      )}
-    </div>
+                <Grid item xs={12}>
+                  <Box display="flex" justifyContent="flex-end">
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      color="primary"
+                      startIcon={<SaveIcon />}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <CircularProgress size={24} />
+                      ) : isEditMode ? (
+                        '更新班級'
+                      ) : (
+                        '創建班級'
+                      )}
+                    </Button>
+                  </Box>
+                </Grid>
+              </Grid>
+            </form>
+          </Box>
+        </Paper>
+      </Box>
+    </Container>
   );
 };
 
-export default ClassForm;  // This should be placed here
+export default ClassForm;

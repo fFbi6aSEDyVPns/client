@@ -1,18 +1,20 @@
 import {
     GET_ASSIGNMENTS,
     GET_ASSIGNMENT,
-    ADD_ASSIGNMENT,
+    CREATE_ASSIGNMENT,
     UPDATE_ASSIGNMENT,
     DELETE_ASSIGNMENT,
     ASSIGNMENT_ERROR,
-    CLEAR_ASSIGNMENT
+    CLEAR_ASSIGNMENT,
+    SUBMIT_ASSIGNMENT,
+    GRADE_ASSIGNMENT
   } from '../actions/types';
   
   const initialState = {
     assignments: [],
     assignment: null,
     loading: true,
-    error: {}
+    error: null
   };
   
   export default function(state = initialState, action) {
@@ -23,19 +25,22 @@ import {
         return {
           ...state,
           assignments: payload,
-          loading: false
+          loading: false,
+          error: null
         };
       case GET_ASSIGNMENT:
         return {
           ...state,
           assignment: payload,
-          loading: false
+          loading: false,
+          error: null
         };
-      case ADD_ASSIGNMENT:
+      case CREATE_ASSIGNMENT:
         return {
           ...state,
           assignments: [payload, ...state.assignments],
-          loading: false
+          loading: false,
+          error: null
         };
       case UPDATE_ASSIGNMENT:
         return {
@@ -43,13 +48,39 @@ import {
           assignments: state.assignments.map(assignment => 
             assignment._id === payload._id ? payload : assignment
           ),
-          loading: false
+          assignment: payload,
+          loading: false,
+          error: null
         };
       case DELETE_ASSIGNMENT:
         return {
           ...state,
           assignments: state.assignments.filter(assignment => assignment._id !== payload),
-          loading: false
+          assignment: null,
+          loading: false,
+          error: null
+        };
+      case SUBMIT_ASSIGNMENT:
+        return {
+          ...state,
+          assignment: {
+            ...state.assignment,
+            submissions: [...state.assignment.submissions, payload]
+          },
+          loading: false,
+          error: null
+        };
+      case GRADE_ASSIGNMENT:
+        return {
+          ...state,
+          assignment: {
+            ...state.assignment,
+            submissions: state.assignment.submissions.map(submission =>
+              submission._id === payload._id ? payload : submission
+            )
+          },
+          loading: false,
+          error: null
         };
       case ASSIGNMENT_ERROR:
         return {
@@ -60,7 +91,9 @@ import {
       case CLEAR_ASSIGNMENT:
         return {
           ...state,
-          assignment: null
+          assignment: null,
+          loading: true,
+          error: null
         };
       default:
         return state;

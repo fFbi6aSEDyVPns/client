@@ -1,0 +1,60 @@
+// Auth Types
+export const REGISTER_REQUEST = 'REGISTER_REQUEST';
+export const REGISTER_SUCCESS = 'REGISTER_SUCCESS';
+export const REGISTER_FAIL = 'REGISTER_FAIL';
+export const LOGIN_REQUEST = 'LOGIN_REQUEST';
+export const LOGIN_SUCCESS = 'LOGIN_SUCCESS';
+export const LOGIN_FAIL = 'LOGIN_FAIL';
+export const LOGOUT = 'LOGOUT';
+export const USER_LOADED = 'USER_LOADED';
+export const LOADING_USER = 'LOADING_USER';
+export const AUTH_ERROR = 'AUTH_ERROR';
+export const CLEAR_ERRORS = 'CLEAR_ERRORS';
+
+// Alert Types
+export const SET_ALERT = 'SET_ALERT';
+export const REMOVE_ALERT = 'REMOVE_ALERT';
+
+// Assignment Types
+export const GET_ASSIGNMENTS = 'GET_ASSIGNMENTS';
+export const GET_ASSIGNMENT = 'GET_ASSIGNMENT';
+export const CREATE_ASSIGNMENT = 'CREATE_ASSIGNMENT';
+export const UPDATE_ASSIGNMENT = 'UPDATE_ASSIGNMENT';
+export const DELETE_ASSIGNMENT = 'DELETE_ASSIGNMENT';
+export const SUBMIT_ASSIGNMENT = 'SUBMIT_ASSIGNMENT';
+export const GRADE_ASSIGNMENT = 'GRADE_ASSIGNMENT';
+export const ASSIGNMENT_ERROR = 'ASSIGNMENT_ERROR';
+export const CLEAR_ASSIGNMENT = 'CLEAR_ASSIGNMENT';
+
+// Class Types
+export const GET_CLASSES = 'GET_CLASSES';
+export const GET_CLASS = 'GET_CLASS';
+export const CREATE_CLASS = 'CREATE_CLASS';
+export const UPDATE_CLASS = 'UPDATE_CLASS';
+export const DELETE_CLASS = 'DELETE_CLASS';
+export const CLASS_ERROR = 'CLASS_ERROR';
+export const CLEAR_CLASS = 'CLEAR_CLASS';
+export const ADD_STUDENT_TO_CLASS = 'ADD_STUDENT_TO_CLASS';
+export const REMOVE_STUDENT_FROM_CLASS = 'REMOVE_STUDENT_FROM_CLASS';
+export const ADD_CLASS = 'ADD_CLASS';
+
+// Schedule Types
+export const GET_SCHEDULES = 'GET_SCHEDULES';
+export const GET_SCHEDULE = 'GET_SCHEDULE';
+export const CREATE_SCHEDULE = 'CREATE_SCHEDULE';
+export const UPDATE_SCHEDULE = 'UPDATE_SCHEDULE';
+export const DELETE_SCHEDULE = 'DELETE_SCHEDULE';
+export const DELETE_SCHEDULE_ITEM = 'DELETE_SCHEDULE_ITEM';
+export const SCHEDULE_ERROR = 'SCHEDULE_ERROR';
+export const CLEAR_SCHEDULE = 'CLEAR_SCHEDULE';
+export const ADD_SCHEDULE = 'ADD_SCHEDULE';
+
+// Study Log Types
+export const GET_STUDY_LOGS = 'GET_STUDY_LOGS';
+export const GET_STUDY_LOG = 'GET_STUDY_LOG';
+export const CREATE_STUDY_LOG = 'CREATE_STUDY_LOG';
+export const UPDATE_STUDY_LOG = 'UPDATE_STUDY_LOG';
+export const DELETE_STUDY_LOG = 'DELETE_STUDY_LOG';
+export const STUDY_LOG_ERROR = 'STUDY_LOG_ERROR';
+export const CLEAR_STUDY_LOG = 'CLEAR_STUDY_LOG';
+export const ADD_STUDY_LOG = 'ADD_STUDY_LOG'; 

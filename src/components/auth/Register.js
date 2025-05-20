@@ -2,22 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
-  Container,
   Typography,
   TextField,
   Button,
   Grid,
-  Paper,
   Box,
   CircularProgress,
-  Alert,
   MenuItem,
-} from '@material-ui/core';
+  Alert,
+  Card,
+  CardHeader,
+  CardContent,
+  Link,
+} from '@mui/material';
 import { register } from '../../redux/actions/auth';
+import { ROLES } from '../../constants';
+import { Link as RouterLink } from 'react-router-dom';
 
 const Register = () => {
   const [formData, setFormData] = useState({
-    username: '',
     name: '',
     email: '',
     password: '',
@@ -25,7 +28,8 @@ const Register = () => {
     role: 'student',
   });
 
-  const [passwordError, setPasswordError] = useState('');
+  const [errors, setErrors] = useState({});
+  const [localError, setLocalError] = useState('');
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -37,160 +41,164 @@ const Register = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const { username, name, email, password, confirmPassword, role } = formData;
+  const { name, email, password, confirmPassword, role } = formData;
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!name.trim()) {
+      newErrors.name = '請輸入姓名';
+    }
+
+    if (!email.trim()) {
+      newErrors.email = '請輸入電子郵件';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = '請輸入有效的電子郵件地址';
+    }
+
+    if (!password) {
+      newErrors.password = '請輸入密碼';
+    } else if (password.length < 6) {
+      newErrors.password = '密碼至少需要6個字符';
+    }
+
+    if (!confirmPassword) {
+      newErrors.confirmPassword = '請確認密碼';
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = '密碼不一致';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const onChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    
-    // 檢查密碼一致性
-    if (e.target.name === 'confirmPassword' || e.target.name === 'password') {
-      if (e.target.name === 'confirmPassword' && e.target.value !== password) {
-        setPasswordError('Passwords do not match');
-      } else if (e.target.name === 'password' && e.target.value !== confirmPassword && confirmPassword !== '') {
-        setPasswordError('Passwords do not match');
-      } else {
-        setPasswordError('');
-      }
-    }
+    setLocalError('');
   };
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    
-    if (password !== confirmPassword) {
-      setPasswordError('Passwords do not match');
+    if (!validateForm()) {
+      setLocalError('請檢查表單錯誤');
       return;
     }
-    
-    dispatch(register({ username, name, email, password, role }));
+
+    try {
+      const { confirmPassword, ...registerData } = formData;
+      console.log('註冊請求數據:', registerData);
+      const result = await dispatch(register(registerData));
+      console.log('註冊響應:', result);
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('註冊錯誤:', err);
+      setLocalError(err.response?.data?.message || '註冊失敗');
+    }
   };
 
-  const roles = [
-    { value: 'student', label: 'Student' },
-    { value: 'monitor', label: 'Classleader' },
-    { value: 'teacher', label: 'Teacher' },
-  ];
-
   return (
-    <Container maxWidth="xs">
-      <Box mt={8}>
-        <Paper elevation={3}>
-          <Box p={4}>
-            <Typography variant="h4" align="center" gutterBottom>
-              Register
-            </Typography>
-            {error && (
+    <Grid container justifyContent="center" alignItems="center" style={{ minHeight: '80vh' }}>
+      <Grid item xs={12} sm={8} md={6} lg={4}>
+        <Card>
+          <CardHeader title="註冊" />
+          <CardContent>
+            {(error || localError) && (
               <Box mt={2}>
-                <Alert severity="error">{error}</Alert>
+                <Alert severity="error">{error || localError}</Alert>
               </Box>
             )}
             <form onSubmit={onSubmit}>
-              <TextField
-                variant="outlined"
-                margin="normal"
-                required
-                fullWidth
-                id="username"
-                label="Username"
-                name="username"
-                autoComplete="username"
-                autoFocus
-                value={username}
-                onChange={onChange}
-              />
-              <TextField
-                variant="outlined"
-                margin="normal"
-                required
-                fullWidth
-                id="name"
-                label="Name"
-                name="name"
-                autoComplete="name"
-                value={name}
-                onChange={onChange}
-              />
-              <TextField
-                variant="outlined"
-                margin="normal"
-                required
-                fullWidth
-                id="email"
-                label="Email"
-                name="email"
-                autoComplete="email"
-                value={email}
-                onChange={onChange}
-              />
-              <TextField
-                variant="outlined"
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                type="password"
-                id="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={onChange}
-              />
-              <TextField
-                variant="outlined"
-                margin="normal"
-                required
-                fullWidth
-                name="confirmPassword"
-                label="Confirm Password"
-                type="password"
-                id="confirmPassword"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={onChange}
-                error={!!passwordError}
-                helperText={passwordError}
-              />
-              <TextField
-                select
-                variant="outlined"
-                margin="normal"
-                required
-                fullWidth
-                name="role"
-                label="Role"
-                id="role"
-                value={role}
-                onChange={onChange}
-              >
-                {roles.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <Box mt={2}>
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  color="primary"
-                  disabled={loading || !!passwordError}
-                >
-                  {loading ? <CircularProgress size={24} /> : 'Register'}
-                </Button>
-              </Box>
-            </form>
-            <Grid container justifyContent="center" mt={2}>
-              <Grid item>
-                <Button color="primary" onClick={() => navigate('/login')}>
-                Already have an account? Sign in
-                </Button>
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="用戶名"
+                    name="name"
+                    value={name}
+                    onChange={onChange}
+                    error={!!errors.name}
+                    helperText={errors.name}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="電子郵件"
+                    name="email"
+                    type="email"
+                    value={email}
+                    onChange={onChange}
+                    error={!!errors.email}
+                    helperText={errors.email}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="密碼"
+                    name="password"
+                    type="password"
+                    value={password}
+                    onChange={onChange}
+                    error={!!errors.password}
+                    helperText={errors.password}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="確認密碼"
+                    name="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={onChange}
+                    error={!!errors.confirmPassword}
+                    helperText={errors.confirmPassword}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    select
+                    label="角色"
+                    name="role"
+                    value={role}
+                    onChange={onChange}
+                  >
+                    <MenuItem value={ROLES.STUDENT}>學生</MenuItem>
+                    <MenuItem value={ROLES.TEACHER}>老師</MenuItem>
+                  </TextField>
+                </Grid>
+                <Grid item xs={12}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    disabled={loading}
+                    startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+                  >
+                    {loading ? '註冊中...' : '註冊'}
+                  </Button>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography align="center">
+                    已有帳號？{' '}
+                    <Link component={RouterLink} to="/login">
+                      立即登入
+                    </Link>
+                  </Typography>
+                </Grid>
               </Grid>
-            </Grid>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+            </form>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
   );
 };
 

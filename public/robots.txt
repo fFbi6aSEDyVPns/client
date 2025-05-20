@@ -1,3 +1,14 @@
 # https://www.robotstxt.org/robotstxt.html
+# 允許所有搜索引擎爬蟲訪問
 User-agent: *
-Disallow:
+Allow: /
+
+# 禁止爬蟲訪問 API 路徑
+Disallow: /api/
+
+# 禁止爬蟲訪問管理後台
+Disallow: /admin/
+Disallow: /dashboard/
+
+# 網站地圖
+Sitemap: https://your-domain.com/sitemap.xml

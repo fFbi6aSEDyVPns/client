@@ -1,37 +1,36 @@
 import {
-  REGISTER_REQUEST,
   REGISTER_SUCCESS,
   REGISTER_FAIL,
-  LOGIN_REQUEST,
   LOGIN_SUCCESS,
   LOGIN_FAIL,
   USER_LOADED,
-  LOADING_USER,
   AUTH_ERROR,
-  LOGOUT
-} from './type';
-import api from '../../services/api';
-import { setToken, removeToken, setUser, removeUser } from '../../utils/auth';
+  LOGOUT,
+  CLEAR_ERRORS
+} from './types';
+import { setAlert } from './alert';
+import api from '../../utils/api';
+import setAuthToken from '../../utils/setAuthToken';
 
 /**
  * Load user data if authenticated
  */
-export const loadUser = () => async (dispatch) => {
-  try {
-    dispatch({ type: LOADING_USER });
+export const loadUser = () => async dispatch => {
+  if (localStorage.token) {
+    setAuthToken(localStorage.token);
+  }
 
-    const res = await api.get('/auth/user');
+  try {
+    const res = await api.get('/auth');
 
     dispatch({
       type: USER_LOADED,
       payload: res.data
     });
-    
-    setUser(res.data);
   } catch (err) {
-    dispatch({ type: AUTH_ERROR });
-    removeToken();
-    removeUser();
+    dispatch({
+      type: AUTH_ERROR
+    });
   }
 };
 
@@ -39,32 +38,21 @@ export const loadUser = () => async (dispatch) => {
  * Register a new user
  * @param {object} userData - User registration data
  */
-export const register = (userData) => async (dispatch) => {
+export const register = formData => async dispatch => {
   try {
-    dispatch({ type: REGISTER_REQUEST });
-
-    const res = await api.post('/auth/register', userData);
+    const res = await api.post('/users', formData);
 
     dispatch({
       type: REGISTER_SUCCESS,
       payload: res.data
     });
-    
-    setToken(res.data.token);
-    setUser(res.data.user);
-    
-    dispatch(loadUser());
-    
-    return res.data;
+
+    loadUser();
   } catch (err) {
-    const errorMessage = err.response?.data?.message || 'Registration failed';
-    
     dispatch({
       type: REGISTER_FAIL,
-      payload: errorMessage
+      payload: err.response?.data?.message || '註冊失敗'
     });
-    
-    throw new Error(errorMessage);
   }
 };
 
@@ -72,41 +60,55 @@ export const register = (userData) => async (dispatch) => {
  * Login user
  * @param {object} credentials - User login credentials
  */
-export const login = (credentials) => async (dispatch) => {
+export const login = formData => async dispatch => {
   try {
-    dispatch({ type: LOGIN_REQUEST });
-
-    const res = await api.post('/auth/login', credentials);
+    const res = await api.post('/auth', formData);
 
     dispatch({
       type: LOGIN_SUCCESS,
       payload: res.data
     });
-    
-    setToken(res.data.token);
-    setUser(res.data.user);
-    
-    dispatch(loadUser());
-    
-    return res.data;
+
+    loadUser();
   } catch (err) {
-    const errorMessage = err.response?.data?.message || 'Login failed';
-    
     dispatch({
       type: LOGIN_FAIL,
-      payload: errorMessage
+      payload: err.response?.data?.message || '登入失敗'
     });
-    
-    throw new Error(errorMessage);
   }
 };
 
 /**
  * Logout user
  */
-export const logout = () => (dispatch) => {
-  removeToken();
-  removeUser();
-  
+export const logout = () => dispatch => {
   dispatch({ type: LOGOUT });
+};
+
+/**
+ * Update user profile
+ * @param {object} formData - User profile update data
+ */
+export const updateProfile = (formData) => async (dispatch) => {
+  try {
+    const res = await api.put('/auth/profile', formData);
+    dispatch({
+      type: USER_LOADED,
+      payload: res.data.user
+    });
+    dispatch(setAlert('個人資料已更新', 'success'));
+  } catch (err) {
+    dispatch({
+      type: AUTH_ERROR,
+      payload: err.response?.data?.message || '更新個人資料失敗'
+    });
+    dispatch(setAlert(err.response?.data?.message || '更新個人資料失敗', 'error'));
+  }
+};
+
+/**
+ * Clear errors
+ */
+export const clearErrors = () => dispatch => {
+  dispatch({ type: CLEAR_ERRORS });
 };

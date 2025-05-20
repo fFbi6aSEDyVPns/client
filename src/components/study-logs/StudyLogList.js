@@ -1,124 +1,113 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { getStudyLogsByClass, getStudyLogsByStudent } from '../../services/studyLogService';
-import { useSelector } from 'react-redux';
-import moment from 'moment';
-import Spinner from '../common/Spinner';
+import { getStudyLogs, deleteStudyLog } from '../../redux/actions/studyLog';
+import { setAlert } from '../../redux/actions/alert';
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  CircularProgress,
+  IconButton
+} from '@mui/material';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 
-const StudyLogList = ({ classId }) => {
-  const [studyLogs, setStudyLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [totalHours, setTotalHours] = useState(0);
-  const { user } = useSelector((state) => state.auth);
-  const isTeacher = user && user.role === 'teacher';
+const StudyLogList = () => {
+  const dispatch = useDispatch();
+  const { studyLogs, loading } = useSelector(state => state.studyLog);
+  const { user } = useSelector(state => state.auth);
 
   useEffect(() => {
-    const fetchStudyLogs = async () => {
-      try {
-        let logs;
-        if (isTeacher) {
-          logs = await getStudyLogsByClass(classId);
-        } else {
-          logs = await getStudyLogsByStudent(classId, user._id);
-        }
-        
-        // Sort logs by date (newest first)
-        logs.sort((a, b) => new Date(b.date) - new Date(a.date));
-        
-        setStudyLogs(logs);
-        
-        // Calculate total hours
-        const total = logs.reduce((sum, log) => sum + log.duration, 0);
-        setTotalHours(total);
-        
-        setLoading(false);
-      } catch (err) {
-        console.error("Failed to load study logs:", err);
-        setError('Failed to load study logs');
-        setLoading(false);
-      }
-    };
+    dispatch(getStudyLogs());
+  }, [dispatch]);
 
-    fetchStudyLogs();
-  }, [classId, user._id, isTeacher]);
-
-  // Group logs by date
-  const groupedByDate = studyLogs.reduce((groups, log) => {
-    const date = moment(log.date).format('YYYY-MM-DD');
-    if (!groups[date]) {
-      groups[date] = [];
+  const handleDelete = (id) => {
+    if (window.confirm('確定要刪除這條學習記錄嗎？')) {
+      dispatch(deleteStudyLog(id));
     }
-    groups[date].push(log);
-    return groups;
-  }, {});
+  };
 
   if (loading) {
-    return <Spinner />;
-  }
-
-  if (error) {
-    return <div className="alert alert-danger">{error}</div>;
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '2rem 0' }}>
+        <CircularProgress />
+      </div>
+    );
   }
 
   return (
-    <div className="study-logs-container">
-      <div className="study-logs-header">
-        <h2>Study Logs</h2>
-        <div className="study-logs-summary">
-          <p>Total Study Time: {totalHours.toFixed(1)} hours</p>
-          <Link to={`/classes/${classId}/study-logs/new`} className="btn btn-primary">
-            Add Study Log
-          </Link>
-        </div>
-      </div>
-
-      {studyLogs.length === 0 ? (
-        <div className="study-logs-empty">
-          <p>No study logs recorded yet.</p>
-          <p>Start tracking your study time to see your progress!</p>
-        </div>
-      ) : (
-        <div className="study-logs-list">
-          {Object.entries(groupedByDate).map(([date, logs]) => (
-            <div key={date} className="study-log-day">
-              <h3>{moment(date).format('dddd, MMMM D, YYYY')}</h3>
-              {logs.map(log => (
-                <div key={log._id} className="study-log-item">
-                  {isTeacher && (
-                    <div className="student-info">
-                      <span className="student-name">
-                        {log.student.firstName} {log.student.lastName}
-                      </span>
-                    </div>
-                  )}
-                  <div className="log-content">
-                    <div className="log-topic">
-                      <h4>{log.topic}</h4>
-                    </div>
-                    <div className="log-details">
-                      <span className="log-duration">{log.duration} hours</span>
-                      <span className="log-time">{moment(log.date).format('h:mm a')}</span>
-                    </div>
-                    {log.notes && <p className="log-notes">{log.notes}</p>}
-                  </div>
-                  {!isTeacher && (
-                    <div className="log-actions">
-                      <Link 
-                        to={`/classes/${classId}/study-logs/${log._id}/edit`}
-                        className="btn btn-sm btn-outline-primary"
+    <Card>
+      <CardHeader
+        title="學習記錄"
+        action={
+          <Button
+            component={Link}
+            to="/study-logs/create"
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+          >
+            新增記錄
+          </Button>
+        }
+      />
+      <CardContent>
+        {studyLogs.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            暫無學習記錄
+          </div>
+        ) : (
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>日期</TableCell>
+                  <TableCell>課程</TableCell>
+                  <TableCell>學習時長</TableCell>
+                  <TableCell>學習內容</TableCell>
+                  <TableCell>操作</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {studyLogs.map(log => (
+                  <TableRow key={log._id}>
+                    <TableCell>{new Date(log.date).toLocaleDateString()}</TableCell>
+                    <TableCell>{log.course}</TableCell>
+                    <TableCell>{log.duration} 分鐘</TableCell>
+                    <TableCell>{log.content}</TableCell>
+                    <TableCell>
+                      <IconButton
+                        component={Link}
+                        to={`/study-logs/${log._id}`}
+                        color="primary"
+                        size="small"
                       >
-                        Edit
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        color="error"
+                        size="small"
+                        onClick={() => handleDelete(log._id)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

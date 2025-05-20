@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { Container, Typography, Box, Button, Alert } from '@mui/material';
 import ScheduleList from '../components/schedule/ScheduleList';
 import ScheduleForm from '../components/schedule/ScheduleForm';
 import { getClass } from '../services/classService';
@@ -17,70 +18,105 @@ const Schedule = () => {
   useEffect(() => {
     const fetchClassData = async () => {
       try {
+        console.log('正在載入班級資料，班級ID:', classId);
         const data = await getClass(classId);
+        console.log('載入到的班級數據:', data);
+        
+        // 檢查用戶權限
+        const isTeacher = user.role === 'teacher';
+        const isEnrolled = data.students.some(student => student._id === user._id);
+        const isClassTeacher = isTeacher && data.teacher._id === user._id;
+
+        if (!isEnrolled && !isClassTeacher) {
+          throw new Error('您沒有權限查看此班級的課程表');
+        }
+
         setClassData(data);
         setLoading(false);
       } catch (err) {
-        console.error("Failed to load class:", err);
-        setError('Failed to load class information');
+        console.error("載入班級資料失敗:", err);
+        console.error("錯誤詳情:", {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status
+        });
+        setError(err.message || '無法載入班級資料');
         setLoading(false);
       }
     };
 
     fetchClassData();
-  }, [classId]);
+  }, [classId, user]);
 
   if (loading) {
     return <Spinner />;
   }
 
   if (error) {
-    return <div className="alert alert-danger">{error}</div>;
-  }
-
-  if (!classData) {
-    return <div className="alert alert-warning">Class not found</div>;
-  }
-
-  // Check if user is enrolled in this class or is a teacher
-  const isTeacher = user.role === 'teacher';
-  const isEnrolled = classData.students.some(student => student._id === user._id);
-  const isClassTeacher = isTeacher && classData.teacher._id === user._id;
-
-  if (!isEnrolled && !isClassTeacher) {
     return (
-      <div className="not-enrolled-message">
-        <div className="alert alert-warning">
-          You are not enrolled in this class and cannot view its schedule.
-        </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => navigate('/dashboard')}
-        >
-          Back to Dashboard
-        </button>
-      </div>
+      <Container>
+        <Box my={4}>
+          <Alert severity="error">{error}</Alert>
+          <Box mt={2}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => navigate('/dashboard')}
+            >
+              返回儀表板
+            </Button>
+          </Box>
+        </Box>
+      </Container>
     );
   }
 
-  // Render different components based on URL parameters
+  if (!classData) {
+    return (
+      <Container>
+        <Box my={4}>
+          <Alert severity="warning">找不到班級資料</Alert>
+          <Box mt={2}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => navigate('/dashboard')}
+            >
+              返回儀表板
+            </Button>
+          </Box>
+        </Box>
+      </Container>
+    );
+  }
+
+  // 渲染不同內容基於URL參數
   const renderContent = () => {
-    // Create a new schedule item
-    if (action === 'new' && isClassTeacher) {
-      return <ScheduleForm />;
+    // 查看特定課程
+    if (scheduleId && !action) {
+      return <ScheduleDetail classId={classId} scheduleId={scheduleId} />;
     }
     
-    // Edit an existing schedule item
-    if (scheduleId && action === 'edit' && isClassTeacher) {
-      return <ScheduleForm />;
+    // 創建新課程
+    if (action === 'new' && user.role === 'teacher' && classData.teacher._id === user._id) {
+      return <ScheduleForm classId={classId} />;
     }
     
-    // Default: show schedule list
+    // 編輯現有課程
+    if (scheduleId && action === 'edit' && user.role === 'teacher' && classData.teacher._id === user._id) {
+      return <ScheduleForm classId={classId} scheduleId={scheduleId} isEditing={true} />;
+    }
+    
+    // 預設：顯示課程表
     return (
       <div>
         <div className="class-header">
-          <h1>{classData.name}</h1>
-          <p>{classData.description}</p>
+          <Typography variant="h4" component="h1" gutterBottom>
+            {classData.name}
+          </Typography>
+          <Typography variant="body1" color="textSecondary" paragraph>
+            {classData.description}
+          </Typography>
         </div>
         <ScheduleList classId={classId} />
       </div>
@@ -88,11 +124,11 @@ const Schedule = () => {
   };
 
   return (
-    <div className="schedule-page">
-      <div className="container">
+    <Container>
+      <Box my={4}>
         {renderContent()}
-      </div>
-    </div>
+      </Box>
+    </Container>
   );
 };
 

@@ -31,20 +31,20 @@ const ClassList = () => {
   return (
     <div className="class-list-container">
       <div className="class-list-header">
-        <h1>Class Management</h1>
+        <h1>班級管理</h1>
         <div className="actions-container">
           <div className="search-container">
             <input
               type="text"
-              placeholder="Searching Class..."
+              placeholder="搜尋班級..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
             />
           </div>
-          {user && user.role === 'teacher' && (
+          {user && (user.role === 'teacher' || user.role === 'admin') && (
             <Link to="/classes/create" className="btn-create">
-              <FaPlus /> create new class
+              <FaPlus /> 創建新班級
             </Link>
           )}
         </div>
@@ -52,7 +52,7 @@ const ClassList = () => {
 
       {filteredClasses.length === 0 ? (
         <div className="no-classes">
-          <p>no class record</p>
+          <p>尚無班級記錄</p>
         </div>
       ) : (
         <div className="class-grid">
@@ -63,13 +63,13 @@ const ClassList = () => {
                 <span className="class-code">{cls.classCode}</span>
               </div>
               <div className="class-card-body">
-                <p><strong>Subject:</strong> {cls.subject}</p>
-                <p><strong>Grade:</strong> {cls.grade}</p>
-                <p><strong>Student number:</strong> {cls.students ? cls.students.length : 0}</p>
+                <p><strong>科目：</strong> {cls.subject}</p>
+                <p><strong>年級：</strong> {cls.grade}</p>
+                <p><strong>學生人數：</strong> {cls.students ? cls.students.length : 0}</p>
               </div>
               <div className="class-card-footer">
                 <Link to={`/classes/${cls._id}`} className="btn-view">
-                  Look detail
+                  查看詳情
                 </Link>
                 {user && user.role === 'teacher' && user._id === cls.teacher && (
                   <div className="teacher-actions">

@@ -6,12 +6,13 @@ import {
   Toolbar,
   Typography,
   Button,
-  Box,
   IconButton,
   Menu,
   MenuItem,
-} from '@material-ui/core';
-import { AccountCircle } from '@material-ui/icons';
+  Box,
+  Container,
+} from '@mui/material';
+import { AccountCircle } from '@mui/icons-material';
 import { logout } from '../../redux/actions/auth';
 
 const Navbar = () => {

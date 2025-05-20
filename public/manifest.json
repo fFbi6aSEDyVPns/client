@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "教育平台",
+  "name": "教育平台 - 線上學習系統",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,6 +20,17 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "theme_color": "#3f51b5",
+  "background_color": "#ffffff",
+  "description": "提供線上課程、作業管理、學習日誌等功能的教育平台",
+  "lang": "zh-TW",
+  "orientation": "portrait",
+  "categories": ["education", "productivity"],
+  "screenshots": [
+    {
+      "src": "screenshot1.png",
+      "sizes": "1280x720",
+      "type": "image/png"
+    }
+  ]
 }

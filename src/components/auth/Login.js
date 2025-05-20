@@ -2,23 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
-  Container,
   Typography,
   TextField,
   Button,
   Grid,
-  Paper,
   Box,
   CircularProgress,
   Alert,
-} from '@material-ui/core';
+  Card,
+  CardHeader,
+  CardContent,
+  Link,
+} from '@mui/material';
 import { login } from '../../redux/actions/auth';
+import { Link as RouterLink } from 'react-router-dom';
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: '',
   });
+  const [localError, setLocalError] = useState('');
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -30,79 +34,90 @@ const Login = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const { username, password } = formData;
+  const { email, password } = formData;
 
-  const onChange = (e) =>
+  const onChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setLocalError('');
+  };
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    dispatch(login(username, password));
+    setLocalError('');
+    
+    if (!email || !password) {
+      setLocalError('請輸入電子郵件和密碼');
+      return;
+    }
+
+    try {
+      await dispatch(login({ email, password }));
+    } catch (err) {
+      console.error('登入錯誤:', err);
+      setLocalError(err.response?.data?.message || '登入失敗');
+    }
   };
 
   return (
-    <Container maxWidth="xs">
-      <Box mt={8}>
-        <Paper elevation={3}>
-          <Box p={4}>
-            <Typography variant="h4" align="center" gutterBottom>
-              Login
-            </Typography>
-            {error && (
+    <Grid container justifyContent="center" alignItems="center" style={{ minHeight: '80vh' }}>
+      <Grid item xs={12} sm={8} md={6} lg={4}>
+        <Card>
+          <CardHeader title="登入" />
+          <CardContent>
+            {(error || localError) && (
               <Box mt={2}>
-                <Alert severity="error">{error}</Alert>
+                <Alert severity="error">{error || localError}</Alert>
               </Box>
             )}
             <form onSubmit={onSubmit}>
-              <TextField
-                variant="outlined"
-                margin="normal"
-                required
-                fullWidth
-                id="username"
-                label="Username"
-                name="username"
-                autoComplete="username"
-                autoFocus
-                value={username}
-                onChange={onChange}
-              />
-              <TextField
-                variant="outlined"
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                type="password"
-                id="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={onChange}
-              />
-              <Box mt={2}>
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  color="primary"
-                  disabled={loading}
-                >
-                  {loading ? <CircularProgress size={24} /> : 'Login'}
-                </Button>
-              </Box>
-            </form>
-            <Grid container justifyContent="center" mt={2}>
-              <Grid item>
-                <Button color="primary" onClick={() => navigate('/register')}>
-                Don't have an account? Sign up
-                </Button>
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="用戶名"
+                    name="email"
+                    value={email}
+                    onChange={onChange}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="密碼"
+                    name="password"
+                    type="password"
+                    value={password}
+                    onChange={onChange}
+                    required
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    disabled={loading}
+                    startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+                  >
+                    {loading ? '登入中...' : '登入'}
+                  </Button>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography align="center">
+                    還沒有帳號？{' '}
+                    <Link component={RouterLink} to="/register">
+                      立即註冊
+                    </Link>
+                  </Typography>
+                </Grid>
               </Grid>
-            </Grid>
-          </Box>
-        </Paper>
-      </Box>
-    </Container>
+            </form>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
   );
 };
 

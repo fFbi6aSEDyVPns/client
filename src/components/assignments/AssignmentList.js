@@ -1,73 +1,170 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { getAssignmentsByClass } from '../../services/assignmentService';
-import Spinner from '../common/Spinner';
-import moment from 'moment';
+import {
+  Container,
+  Typography,
+  Box,
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
+  IconButton,
+  Button,
+  Divider,
+  Alert,
+  CircularProgress,
+  Chip
+} from '@mui/material';
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  Assignment as AssignmentIcon
+} from '@mui/icons-material';
+import { getAssignments, deleteAssignment } from '../../redux/actions/assignment';
+import { format } from 'date-fns';
+import { zhTW } from 'date-fns/locale';
 
 const AssignmentList = ({ classId }) => {
-  const [assignments, setAssignments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { user } = useSelector((state) => state.auth);
-  const isTeacher = user && user.role === 'teacher';
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { assignments, loading, error } = useSelector(state => state.assignment);
+  const { user } = useSelector(state => state.auth);
+  const isTeacher = user?.role === 'teacher';
 
   useEffect(() => {
-    const loadAssignments = async () => {
-      try {
-        const data = await getAssignmentsByClass(classId);
-        setAssignments(data);
-        setLoading(false);
-      } catch (err) {
-        console.error("Failed to load assignments:", err);
-        setLoading(false);
-      }
-    };
+    dispatch(getAssignments(classId));
+  }, [dispatch, classId]);
 
-    loadAssignments();
-  }, [classId]);
+  const handleDelete = async (assignmentId) => {
+    if (window.confirm('確定要刪除此作業嗎？')) {
+      try {
+        await dispatch(deleteAssignment(assignmentId));
+      } catch (err) {
+        console.error('刪除作業失敗:', err);
+      }
+    }
+  };
+
+  const getStatusColor = (dueDate) => {
+    const now = new Date();
+    const due = new Date(dueDate);
+    if (now > due) return 'error';
+    if (now.getTime() + 24 * 60 * 60 * 1000 > due.getTime()) return 'warning';
+    return 'success';
+  };
 
   if (loading) {
-    return <Spinner />;
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+      </Box>
+    );
   }
 
-  if (assignments.length === 0) {
+  if (error) {
     return (
-      <div className="assignments-empty">
-        <h3>No assignments yet</h3>
-        {isTeacher && (
-          <Link to={`/classes/${classId}/assignments/new`} className="btn btn-primary">
-            Create Assignment
-          </Link>
-        )}
-      </div>
+      <Box my={2}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
     );
   }
 
   return (
-    <div className="assignments-container">
-      <div className="assignments-header">
-        <h2>Assignments</h2>
-        {isTeacher && (
-          <Link to={`/classes/${classId}/assignments/new`} className="btn btn-primary">
-            Create Assignment
-          </Link>
-        )}
-      </div>
-      <div className="assignments-list">
-        {assignments.map(assignment => (
-          <div key={assignment._id} className="assignment-item">
-            <Link to={`/classes/${classId}/assignments/${assignment._id}`}>
-              <h3>{assignment.title}</h3>
-              <p>{assignment.description.substring(0, 100)}...</p>
-              <div className="assignment-meta">
-                <span className="due-date">Due: {moment(assignment.dueDate).format('MMMM D, YYYY')}</span>
-                <span className="points">Points: {assignment.pointsPossible}</span>
-              </div>
-            </Link>
-          </div>
-        ))}
-      </div>
-    </div>
+    <Container maxWidth="md">
+      <Box my={4}>
+        <Paper elevation={3}>
+          <Box p={4}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+              <Typography variant="h4" component="h1">
+                作業列表
+              </Typography>
+              {isTeacher && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => navigate(`/classes/${classId}/assignments/new`)}
+                >
+                  新增作業
+                </Button>
+              )}
+            </Box>
+
+            {assignments.length === 0 ? (
+              <Box textAlign="center" py={4}>
+                <AssignmentIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary">
+                  目前沒有作業
+                </Typography>
+              </Box>
+            ) : (
+              <List>
+                {assignments.map((assignment, index) => (
+                  <React.Fragment key={assignment._id}>
+                    {index > 0 && <Divider />}
+                    <ListItem>
+                      <ListItemText
+                        primary={
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Typography variant="h6">
+                              {assignment.title}
+                            </Typography>
+                            <Chip
+                              label={format(new Date(assignment.dueDate), 'yyyy/MM/dd HH:mm', { locale: zhTW })}
+                              color={getStatusColor(assignment.dueDate)}
+                              size="small"
+                            />
+                          </Box>
+                        }
+                        secondary={
+                          <>
+                            <Typography variant="body2" color="text.secondary" paragraph>
+                              {assignment.description}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              分數：{assignment.pointsPossible}
+                            </Typography>
+                          </>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        <Box display="flex" gap={1}>
+                          <IconButton
+                            edge="end"
+                            onClick={() => navigate(`/classes/${classId}/assignments/${assignment._id}`)}
+                          >
+                            <AssignmentIcon />
+                          </IconButton>
+                          {isTeacher && (
+                            <>
+                              <IconButton
+                                edge="end"
+                                onClick={() => navigate(`/classes/${classId}/assignments/${assignment._id}/edit`)}
+                              >
+                                <EditIcon />
+                              </IconButton>
+                              <IconButton
+                                edge="end"
+                                onClick={() => handleDelete(assignment._id)}
+                              >
+                                <DeleteIcon />
+                              </IconButton>
+                            </>
+                          )}
+                        </Box>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  </React.Fragment>
+                ))}
+              </List>
+            )}
+          </Box>
+        </Paper>
+      </Box>
+    </Container>
   );
 };
 
