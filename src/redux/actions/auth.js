@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../../services/api';
 import {
   REGISTER_SUCCESS,
   REGISTER_FAIL,
@@ -17,23 +17,28 @@ import setAuthToken from '../../utils/setAuthToken';
  */
 export const loadUser = () => async (dispatch) => {
   const token = localStorage.getItem('token');
+  console.log('loadUser - 從 localStorage 獲取的 token:', token);
   
-  if (token) {
-    setAuthToken(token);
-  } else {
-    dispatch({
-      type: AUTH_ERROR
-    });
+  if (!token) {
+    console.log('沒有找到 token，跳過加載用戶信息');
     return;
   }
 
   try {
-    const res = await axios.get('/api/auth');
+    console.log('設置 token 到請求頭...');
+    setAuthToken(token);
+    console.log('當前請求頭:', api.defaults.headers.common);
+    
+    console.log('發送 /auth/me 請求...');
+    const res = await api.get('/auth/me');
+    console.log('/auth/me 響應:', res.data);
+    
     dispatch({
       type: USER_LOADED,
-      payload: res.data
+      payload: res.data.data
     });
   } catch (err) {
+    console.error('加載用戶信息失敗:', err);
     dispatch({
       type: AUTH_ERROR
     });
@@ -45,16 +50,8 @@ export const loadUser = () => async (dispatch) => {
  * @param {object} userData - User registration data
  */
 export const register = ({ name, email, password }) => async (dispatch) => {
-  const config = {
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  };
-
-  const body = JSON.stringify({ name, email, password });
-
   try {
-    const res = await axios.post('/api/users', body, config);
+    const res = await api.post('/auth/register', { name, email, password });
     dispatch({
       type: REGISTER_SUCCESS,
       payload: res.data
@@ -75,23 +72,38 @@ export const register = ({ name, email, password }) => async (dispatch) => {
  * @param {string} password - User password
  */
 export const login = (email, password) => async (dispatch) => {
-  const config = {
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  };
-
-  const body = JSON.stringify({ email, password });
-
   try {
-    const res = await axios.post('/api/auth', body, config);
-    dispatch({
-      type: LOGIN_SUCCESS,
-      payload: res.data
-    });
-    setAuthToken(res.data.token);
-    dispatch(loadUser());
+    console.log('開始登入請求...', { email });
+    const res = await api.post('/auth/login', { email, password });
+    console.log('登入響應:', res.data);
+    
+    if (res.data.token) {
+      console.log('設置 token...', res.data.token);
+      setAuthToken(res.data.token);
+      
+      // 驗證 token 是否正確存儲
+      const storedToken = localStorage.getItem('token');
+      console.log('Token 存儲驗證:', {
+        stored: storedToken,
+        matches: storedToken === res.data.token
+      });
+      
+      dispatch({
+        type: LOGIN_SUCCESS,
+        payload: res.data
+      });
+      
+      console.log('開始加載用戶信息...');
+      dispatch(loadUser());
+    } else {
+      console.error('登入響應中沒有 token:', res.data);
+      dispatch({
+        type: LOGIN_FAIL,
+        payload: '登入失敗：未收到有效的 token'
+      });
+    }
   } catch (err) {
+    console.error('登入錯誤:', err);
     dispatch({
       type: LOGIN_FAIL,
       payload: err.response?.data?.msg || '登入失敗'
@@ -113,7 +125,7 @@ export const logout = () => (dispatch) => {
  */
 export const updateProfile = (formData) => async (dispatch) => {
   try {
-    const res = await axios.put('/api/auth/profile', formData);
+    const res = await api.put('/auth/profile', formData);
     dispatch({
       type: USER_LOADED,
       payload: res.data.user

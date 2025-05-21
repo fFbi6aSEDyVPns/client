@@ -38,7 +38,6 @@ export const CLEAR_CLASS_ERROR = 'CLEAR_CLASS_ERROR';
 export const SET_LOADING = 'SET_LOADING';
 export const ADD_STUDENT_TO_CLASS = 'ADD_STUDENT_TO_CLASS';
 export const REMOVE_STUDENT_FROM_CLASS = 'REMOVE_STUDENT_FROM_CLASS';
-export const ADD_CLASS = 'ADD_CLASS';
 
 // Schedule Types
 export const GET_SCHEDULES = 'GET_SCHEDULES';

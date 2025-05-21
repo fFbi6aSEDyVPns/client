@@ -1,7 +1,8 @@
 import axios from 'axios';
 import store from '../redux/store';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// 直接設置 API URL，不使用環境變量
+const API_URL = 'http://localhost:5000/api/v1';
 
 // Create an axios instance
 const api = axios.create({
@@ -15,18 +16,23 @@ const api = axios.create({
 // Add a request interceptor
 api.interceptors.request.use(
   (config) => {
-    const state = store.getState();
-    const token = state.auth.token;
+    const token = localStorage.getItem('token');
     
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // 確保 URL 不包含重複的 /api 前綴
+    if (config.url.startsWith('/api/')) {
+      config.url = config.url.replace('/api/', '/');
     }
     
     console.log('發送請求:', {
       url: config.url,
       method: config.method,
       data: config.data,
-      headers: config.headers
+      headers: config.headers,
+      baseURL: config.baseURL
     });
     
     return config;
@@ -43,7 +49,8 @@ api.interceptors.response.use(
     console.log('收到響應:', {
       url: response.config.url,
       status: response.status,
-      data: response.data
+      data: response.data,
+      headers: response.headers
     });
     return response;
   },
@@ -56,12 +63,15 @@ api.interceptors.response.use(
       });
     }
 
-    const { status, data } = error.response;
+    const { status, data, headers } = error.response;
     console.error('API 錯誤:', {
       status,
       data,
+      headers,
       url: error.config.url,
-      method: error.config.method
+      method: error.config.method,
+      baseURL: error.config.baseURL,
+      requestHeaders: error.config.headers
     });
     
     // Handle 401 unauthorized globally (token expired)

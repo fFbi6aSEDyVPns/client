@@ -27,7 +27,7 @@ const Login = () => {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    dispatch(login(formData));
+    dispatch(login(email, password));
   };
 
   return (

@@ -10,7 +10,6 @@ import {
   Menu,
   MenuItem,
   Box,
-  Container,
 } from '@mui/material';
 import { AccountCircle } from '@mui/icons-material';
 import { logout } from '../../redux/actions/auth';

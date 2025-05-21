@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../../services/api';
 import { setAlert } from './alert';
 import {
   GET_CLASSES,
@@ -20,10 +20,9 @@ import {
 export const getClasses = () => async (dispatch) => {
   try {
     dispatch({ type: SET_LOADING });
-    const res = await axios.get('/api/classes');
-    console.log('getClasses response:', res.data); // 添加日誌
+    const res = await api.get('/classes');
+    console.log('getClasses response:', res.data);
     
-    // 確保返回的數據結構正確
     if (res.data && res.data.success && Array.isArray(res.data.data)) {
       dispatch({
         type: GET_CLASSES,
@@ -37,7 +36,7 @@ export const getClasses = () => async (dispatch) => {
       });
     }
   } catch (err) {
-    console.error('getClasses error:', err); // 添加錯誤日誌
+    console.error('getClasses error:', err);
     dispatch({
       type: CLASS_ERROR,
       payload: err.response?.data?.msg || '獲取班級列表失敗'
@@ -52,7 +51,7 @@ export const getClasses = () => async (dispatch) => {
 export const getClass = (id) => async (dispatch) => {
   try {
     dispatch({ type: SET_LOADING });
-    const res = await axios.get(`/api/classes/${id}`);
+    const res = await api.get(`/classes/${id}`);
     dispatch({
       type: GET_CLASS,
       payload: res.data
@@ -72,21 +71,15 @@ export const getClass = (id) => async (dispatch) => {
 export const createClass = (formData) => async (dispatch) => {
   try {
     dispatch({ type: SET_LOADING });
-    const config = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-    const res = await axios.post('/api/classes', formData, config);
-    console.log('createClass response:', res.data); // 添加日誌
+    const res = await api.post('/classes', formData);
+    console.log('createClass response:', res.data);
     
-    // 只 dispatch getClasses，不要再 dispatch CREATE_CLASS
     await dispatch(getClasses());
     
     dispatch(setAlert('班級創建成功', 'success'));
     return res.data;
   } catch (err) {
-    console.error('createClass error:', err); // 添加錯誤日誌
+    console.error('createClass error:', err);
     dispatch({
       type: CLASS_ERROR,
       payload: err.response?.data?.msg || '創建班級失敗'
@@ -103,13 +96,7 @@ export const createClass = (formData) => async (dispatch) => {
 export const updateClass = (id, formData) => async (dispatch) => {
   try {
     dispatch({ type: SET_LOADING });
-    const config = {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-
-    const res = await axios.put(`/api/classes/${id}`, formData, config);
+    const res = await api.put(`/classes/${id}`, formData);
     dispatch({
       type: UPDATE_CLASS,
       payload: res.data
@@ -133,7 +120,7 @@ export const updateClass = (id, formData) => async (dispatch) => {
 export const deleteClass = (id) => async (dispatch) => {
   try {
     dispatch({ type: SET_LOADING });
-    await axios.delete(`/api/classes/${id}`);
+    await api.delete(`/classes/${id}`);
     dispatch({
       type: DELETE_CLASS,
       payload: id
@@ -152,7 +139,7 @@ export const deleteClass = (id) => async (dispatch) => {
 export const addStudentToClass = (classId, { students }) => async (dispatch) => {
   try {
     dispatch({ type: SET_LOADING });
-    const res = await axios.post(`/api/classes/${classId}/students`, { students });
+    const res = await api.post(`/classes/${classId}/students`, { students });
     dispatch({
       type: ADD_STUDENT_TO_CLASS,
       payload: res.data
@@ -173,7 +160,7 @@ export const addStudentToClass = (classId, { students }) => async (dispatch) => 
 export const removeStudentFromClass = (classId, { students }) => async (dispatch) => {
   try {
     dispatch({ type: SET_LOADING });
-    const res = await axios.delete(`/api/classes/${classId}/students`, { data: { students } });
+    const res = await api.delete(`/classes/${classId}/students`, { data: { students } });
     dispatch({
       type: REMOVE_STUDENT_FROM_CLASS,
       payload: res.data
@@ -199,7 +186,7 @@ export const clearClass = () => (dispatch) => {
 export const joinClass = (classCode) => async (dispatch) => {
   try {
     dispatch({ type: SET_LOADING });
-    const res = await axios.post(`/api/classes/join/${classCode}`);
+    const res = await api.post(`/classes/join/${classCode}`);
     dispatch({
       type: ADD_STUDENT_TO_CLASS,
       payload: res.data

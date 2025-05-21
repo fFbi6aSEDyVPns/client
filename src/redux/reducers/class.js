@@ -8,7 +8,8 @@ import {
     CLEAR_CLASS,
     SET_LOADING,
     ADD_STUDENT_TO_CLASS,
-    REMOVE_STUDENT_FROM_CLASS
+    REMOVE_STUDENT_FROM_CLASS,
+    CLEAR_CLASS_ERROR
   } from '../actions/types';
   
   const initialState = {
@@ -30,21 +31,21 @@ import {
       case GET_CLASSES:
         return {
           ...state,
-          classes: payload,
+          classes: payload.data || [],
           loading: false,
           error: null
         };
       case GET_CLASS:
         return {
           ...state,
-          currentClass: payload,
+          currentClass: payload.data || null,
           loading: false,
           error: null
         };
       case CREATE_CLASS:
         return {
           ...state,
-          classes: [...state.classes, payload],
+          classes: [...state.classes, payload.data],
           loading: false,
           error: null
         };
@@ -52,9 +53,9 @@ import {
         return {
           ...state,
           classes: state.classes.map(cls => 
-            cls._id === payload._id ? payload : cls
+            cls._id === payload.data._id ? payload.data : cls
           ),
-          currentClass: payload,
+          currentClass: payload.data,
           loading: false,
           error: null
         };
@@ -71,23 +72,25 @@ import {
           ...state,
           currentClass: {
             ...state.currentClass,
-            students: [...state.currentClass.students, payload]
+            students: [...state.currentClass.students, payload.data]
           },
-          loading: false
+          loading: false,
+          error: null
         };
       case REMOVE_STUDENT_FROM_CLASS:
         return {
           ...state,
           currentClass: {
             ...state.currentClass,
-            students: state.currentClass.students.filter(student => student._id !== payload)
+            students: state.currentClass.students.filter(student => student._id !== payload.data._id)
           },
-          loading: false
+          loading: false,
+          error: null
         };
       case CLASS_ERROR:
         return {
           ...state,
-          error: payload.msg,
+          error: payload,
           loading: false
         };
       case CLEAR_CLASS:
@@ -95,6 +98,11 @@ import {
           ...state,
           currentClass: null,
           loading: false,
+          error: null
+        };
+      case CLEAR_CLASS_ERROR:
+        return {
+          ...state,
           error: null
         };
       default:
