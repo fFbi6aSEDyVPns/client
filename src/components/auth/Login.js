@@ -2,31 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
+  Container,
+  Paper,
   Typography,
   TextField,
   Button,
-  Grid,
   Box,
-  CircularProgress,
-  Alert,
-  Card,
-  CardHeader,
-  CardContent,
-  Link,
+  Alert
 } from '@mui/material';
 import { login } from '../../redux/actions/auth';
-import { Link as RouterLink } from 'react-router-dom';
 
 const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
+    password: ''
   });
-  const [localError, setLocalError] = useState('');
 
+  const { email, password } = formData;
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { loading, isAuthenticated, error } = useSelector((state) => state.auth);
+  const { isAuthenticated, error } = useSelector((state) => state.auth);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -34,90 +29,71 @@ const Login = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const { email, password } = formData;
-
   const onChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-    setLocalError('');
   };
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    setLocalError('');
-    
-    if (!email || !password) {
-      setLocalError('請輸入電子郵件和密碼');
-      return;
-    }
-
-    try {
-      await dispatch(login({ email, password }));
-    } catch (err) {
-      console.error('登入錯誤:', err);
-      setLocalError(err.response?.data?.message || '登入失敗');
-    }
+    dispatch(login(email, password));
   };
 
   return (
-    <Grid container justifyContent="center" alignItems="center" style={{ minHeight: '80vh' }}>
-      <Grid item xs={12} sm={8} md={6} lg={4}>
-        <Card>
-          <CardHeader title="登入" />
-          <CardContent>
-            {(error || localError) && (
-              <Box mt={2}>
-                <Alert severity="error">{error || localError}</Alert>
-              </Box>
-            )}
-            <form onSubmit={onSubmit}>
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="用戶名"
-                    name="email"
-                    value={email}
-                    onChange={onChange}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <TextField
-                    fullWidth
-                    label="密碼"
-                    name="password"
-                    type="password"
-                    value={password}
-                    onChange={onChange}
-                    required
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    color="primary"
-                    fullWidth
-                    disabled={loading}
-                    startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
-                  >
-                    {loading ? '登入中...' : '登入'}
-                  </Button>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography align="center">
-                    還沒有帳號？{' '}
-                    <Link component={RouterLink} to="/register">
-                      立即註冊
-                    </Link>
-                  </Typography>
-                </Grid>
-              </Grid>
-            </form>
-          </CardContent>
-        </Card>
-      </Grid>
-    </Grid>
+    <Container maxWidth="sm">
+      <Paper sx={{ p: 4, mt: 4 }}>
+        <Typography variant="h4" component="h1" gutterBottom align="center">
+          登入
+        </Typography>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+        <form onSubmit={onSubmit}>
+          <TextField
+            fullWidth
+            label="電子郵件"
+            name="email"
+            type="email"
+            value={email}
+            onChange={onChange}
+            margin="normal"
+            required
+          />
+          <TextField
+            fullWidth
+            label="密碼"
+            name="password"
+            type="password"
+            value={password}
+            onChange={onChange}
+            margin="normal"
+            required
+          />
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            fullWidth
+            sx={{ mt: 3 }}
+          >
+            登入
+          </Button>
+        </form>
+        <Box sx={{ mt: 2, textAlign: 'center' }}>
+          <Typography variant="body2">
+            還沒有帳號？{' '}
+            <Button
+              color="primary"
+              onClick={() => navigate('/register')}
+              sx={{ textTransform: 'none' }}
+            >
+              立即註冊
+            </Button>
+          </Typography>
+        </Box>
+      </Paper>
+    </Container>
   );
 };
 

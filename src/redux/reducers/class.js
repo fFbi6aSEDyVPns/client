@@ -1,43 +1,52 @@
 import {
     GET_CLASSES,
     GET_CLASS,
-    ADD_CLASS,
+    CREATE_CLASS,
     UPDATE_CLASS,
     DELETE_CLASS,
     CLASS_ERROR,
     CLEAR_CLASS,
+    SET_LOADING,
     ADD_STUDENT_TO_CLASS,
     REMOVE_STUDENT_FROM_CLASS
   } from '../actions/types';
   
   const initialState = {
     classes: [],
-    class: null,
-    loading: true,
-    error: {}
+    currentClass: null,
+    loading: false,
+    error: null
   };
   
-  export default function(state = initialState, action) {
+  const classReducer = (state = initialState, action) => {
     const { type, payload } = action;
   
     switch (type) {
+      case SET_LOADING:
+        return {
+          ...state,
+          loading: true
+        };
       case GET_CLASSES:
         return {
           ...state,
           classes: payload,
-          loading: false
+          loading: false,
+          error: null
         };
       case GET_CLASS:
         return {
           ...state,
-          class: payload,
-          loading: false
+          currentClass: payload,
+          loading: false,
+          error: null
         };
-      case ADD_CLASS:
+      case CREATE_CLASS:
         return {
           ...state,
-          classes: [payload, ...state.classes],
-          loading: false
+          classes: [...state.classes, payload],
+          loading: false,
+          error: null
         };
       case UPDATE_CLASS:
         return {
@@ -45,44 +54,52 @@ import {
           classes: state.classes.map(cls => 
             cls._id === payload._id ? payload : cls
           ),
-          loading: false
+          currentClass: payload,
+          loading: false,
+          error: null
         };
       case DELETE_CLASS:
         return {
           ...state,
           classes: state.classes.filter(cls => cls._id !== payload),
-          loading: false
+          currentClass: null,
+          loading: false,
+          error: null
         };
       case ADD_STUDENT_TO_CLASS:
         return {
           ...state,
-          class: {
-            ...state.class,
-            students: [...state.class.students, payload]
+          currentClass: {
+            ...state.currentClass,
+            students: [...state.currentClass.students, payload]
           },
           loading: false
         };
       case REMOVE_STUDENT_FROM_CLASS:
         return {
           ...state,
-          class: {
-            ...state.class,
-            students: state.class.students.filter(student => student._id !== payload)
+          currentClass: {
+            ...state.currentClass,
+            students: state.currentClass.students.filter(student => student._id !== payload)
           },
           loading: false
         };
       case CLASS_ERROR:
         return {
           ...state,
-          error: payload,
+          error: payload.msg,
           loading: false
         };
       case CLEAR_CLASS:
         return {
           ...state,
-          class: null
+          currentClass: null,
+          loading: false,
+          error: null
         };
       default:
         return state;
     }
-  }
+  };
+  
+  export default classReducer;

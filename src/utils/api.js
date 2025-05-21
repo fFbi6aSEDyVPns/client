@@ -16,30 +16,32 @@ api.interceptors.request.use(
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
+    console.log('發送請求:', {
+      url: config.url,
+      method: config.method,
+      data: config.data,
+      headers: config.headers
+    });
     return config;
   },
   (error) => {
+    console.error('請求錯誤:', error);
     return Promise.reject(error);
   }
 );
 
-// Add response interceptor to handle common errors
+// Add response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
+    console.log('收到響應:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data
+    });
     return response;
   },
   (error) => {
-    // Handle 401 Unauthorized errors (token expired)
-    if (error.response && error.response.status === 401) {
-      // Clear local storage
-      localStorage.clear();
-      
-      // Redirect to login page
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
-    }
-    
+    console.error('響應錯誤:', error.response?.data || error.message);
     return Promise.reject(error);
   }
 );

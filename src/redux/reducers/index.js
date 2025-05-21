@@ -1,12 +1,14 @@
 import { combineReducers } from 'redux';
-import auth from './auth';
-import alert from './alert';
-import classes from './classes';
-import studyLog from './studyLog';
+import authReducer from './auth';
+import alertReducer from './alert';
+import classReducer from './class';
+import studyLogReducer from './studyLog';
 
-export default combineReducers({
-  auth,
-  alert,
-  classes,
-  studyLog
+const rootReducer = combineReducers({
+  auth: authReducer,
+  alert: alertReducer,
+  class: classReducer,
+  studyLog: studyLogReducer
 });
+
+export default rootReducer;

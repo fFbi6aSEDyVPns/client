@@ -1,28 +1,34 @@
+import axios from 'axios';
 import {
   REGISTER_SUCCESS,
   REGISTER_FAIL,
-  LOGIN_SUCCESS,
-  LOGIN_FAIL,
   USER_LOADED,
   AUTH_ERROR,
+  LOGIN_SUCCESS,
+  LOGIN_FAIL,
   LOGOUT,
   CLEAR_ERRORS
 } from './types';
 import { setAlert } from './alert';
-import api from '../../utils/api';
 import setAuthToken from '../../utils/setAuthToken';
 
 /**
  * Load user data if authenticated
  */
-export const loadUser = () => async dispatch => {
-  if (localStorage.token) {
-    setAuthToken(localStorage.token);
+export const loadUser = () => async (dispatch) => {
+  const token = localStorage.getItem('token');
+  
+  if (token) {
+    setAuthToken(token);
+  } else {
+    dispatch({
+      type: AUTH_ERROR
+    });
+    return;
   }
 
   try {
-    const res = await api.get('/auth');
-
+    const res = await axios.get('/api/auth');
     dispatch({
       type: USER_LOADED,
       payload: res.data
@@ -38,42 +44,57 @@ export const loadUser = () => async dispatch => {
  * Register a new user
  * @param {object} userData - User registration data
  */
-export const register = formData => async dispatch => {
-  try {
-    const res = await api.post('/users', formData);
+export const register = ({ name, email, password }) => async (dispatch) => {
+  const config = {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
 
+  const body = JSON.stringify({ name, email, password });
+
+  try {
+    const res = await axios.post('/api/users', body, config);
     dispatch({
       type: REGISTER_SUCCESS,
       payload: res.data
     });
-
-    loadUser();
+    setAuthToken(res.data.token);
+    dispatch(loadUser());
   } catch (err) {
     dispatch({
       type: REGISTER_FAIL,
-      payload: err.response?.data?.message || '註冊失敗'
+      payload: err.response?.data?.msg || '註冊失敗'
     });
   }
 };
 
 /**
  * Login user
- * @param {object} credentials - User login credentials
+ * @param {string} email - User email
+ * @param {string} password - User password
  */
-export const login = formData => async dispatch => {
-  try {
-    const res = await api.post('/auth', formData);
+export const login = (email, password) => async (dispatch) => {
+  const config = {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
 
+  const body = JSON.stringify({ email, password });
+
+  try {
+    const res = await axios.post('/api/auth', body, config);
     dispatch({
       type: LOGIN_SUCCESS,
       payload: res.data
     });
-
-    loadUser();
+    setAuthToken(res.data.token);
+    dispatch(loadUser());
   } catch (err) {
     dispatch({
       type: LOGIN_FAIL,
-      payload: err.response?.data?.message || '登入失敗'
+      payload: err.response?.data?.msg || '登入失敗'
     });
   }
 };
@@ -81,7 +102,8 @@ export const login = formData => async dispatch => {
 /**
  * Logout user
  */
-export const logout = () => dispatch => {
+export const logout = () => (dispatch) => {
+  setAuthToken(null);
   dispatch({ type: LOGOUT });
 };
 
@@ -91,7 +113,7 @@ export const logout = () => dispatch => {
  */
 export const updateProfile = (formData) => async (dispatch) => {
   try {
-    const res = await api.put('/auth/profile', formData);
+    const res = await axios.put('/api/auth/profile', formData);
     dispatch({
       type: USER_LOADED,
       payload: res.data.user

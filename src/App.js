@@ -19,18 +19,23 @@ import Register from './components/auth/Register';
 import Dashboard from './components/dashboard/Dashboard';
 import Profile from './components/profile/Profile';
 import Settings from './components/settings/Settings';
-import Classes from './components/classes/Classes';
+import Classes from './components/class/Classes';
+import CreateClass from './components/class/CreateClass';
 import Assignments from './components/assignments/Assignments';
 import StudyLogs from './components/study-logs/StudyLogs';
+import './App.css';
 
 // Check for token
-if (localStorage.token) {
-  setAuthToken(localStorage.token);
+const token = localStorage.getItem('token');
+if (token) {
+  setAuthToken(token);
 }
 
 const App = () => {
   useEffect(() => {
-    store.dispatch(loadUser());
+    if (token) {
+      store.dispatch(loadUser());
+    }
   }, []);
 
   return (
@@ -43,13 +48,29 @@ const App = () => {
             <Alert />
             <Routes>
               <Route path="/" element={<Landing />} />
-              <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/login" element={<Login />} />
               <Route
                 path="/dashboard"
                 element={
                   <PrivateRoute>
                     <Dashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/classes"
+                element={
+                  <PrivateRoute>
+                    <Classes />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/create-class"
+                element={
+                  <PrivateRoute>
+                    <CreateClass />
                   </PrivateRoute>
                 }
               />
@@ -66,14 +87,6 @@ const App = () => {
                 element={
                   <PrivateRoute>
                     <Settings />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/classes"
-                element={
-                  <PrivateRoute>
-                    <Classes />
                   </PrivateRoute>
                 }
               />

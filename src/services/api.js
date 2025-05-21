@@ -9,8 +9,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  timeout: 10000, // 10秒超時
-  withCredentials: true // 允許跨域請求攜帶憑證
+  timeout: 10000 // 10秒超時
 });
 
 // Add a request interceptor
